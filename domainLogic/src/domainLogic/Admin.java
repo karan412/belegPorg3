@@ -16,18 +16,17 @@ public class Admin {
     /**
      * List of AudioImpl objects
      */
-    private List<MediaUploadable> list = new ArrayList<>();
+    private final List<MediaUploadable> list = new ArrayList<>();
 
-    private AudioImpl a = new AudioImpl();
     /**
      * List Size
      */
-    long SIZE_CAP = 100L;
+    long SIZE_CAP = 100000L;
 
     /**
      * List of UploaderImpl objects
      */
-    private List<UploaderImpl> uploaderList = new ArrayList<>();
+    private final List<UploaderImpl> uploaderList = new ArrayList<>();
 
     /**
      * HashMap to map UploaderImpl objects to AudioImpl objects

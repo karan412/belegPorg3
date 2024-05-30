@@ -1,4 +1,5 @@
 package viewControl;
+
 import util.Command;
 
 import java.util.Scanner;
@@ -8,8 +9,10 @@ import java.util.Scanner;
  */
 public class Console {
     private Command cmd;
+
     /**
      * Konstruktor
+     *
      * @param cmd Command
      */
     public Console(Command cmd) {
@@ -34,7 +37,7 @@ public class Console {
 
                 switch (input) {
                     case ":c":
-                        System.out.println("Geben Sie die Adresse und die SampleRating ein (bsp: [Adresse] [SampleRating]):");
+                        System.out.println("bsp: [Media-Typ] [P-Name] [kommaseparierte Tags, einzelnes Komma für keine] [Größe] [Abrufkosten] [[Optionale Parameter]]");
                         String audioObj = scanner.nextLine();
                         cmd.insertAudio(audioObj);
                         break;
