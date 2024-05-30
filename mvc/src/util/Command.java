@@ -1,6 +1,5 @@
 package util;
 
-import contract.Audio;
 import contract.Tag;
 import contract.Uploader;
 import domainLogic.*;
@@ -14,77 +13,103 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Command Klasse fuer die Verarbeitung von Befehlen
- * (AudioImpl wird hier nur mit 2 Parametern angelegt, um die Funktionalitaet zu testen)
- */
+ * Command Class for managing Media
+ * */
 public class Command {
 
     /**
-     * Admin Objekt
+     * Admin instance
      */
     Admin ad = new Admin();
 
     /**
-     * Liste von AudioImpl Objekten
+     * List of MediaUploadable objects
      */
-    private List<MediaUploadable> list;
-
+    public List<MediaUploadable> list;
 
     /**
-     * Hilfsmethode zum Erstellen eines AudioImpl-Objekts nach Parsen des Inputs
+     * Main method for testing
+     */
+    public static void main(String[] args) {
+        try {
+            Command cmd = new Command();
+            Collection<Tag> t = cmd.parseTags("Animal,Review,Music,News");
+            for (Tag tt : t) {
+                System.out.println(tt);
+            }
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error in main: " + e.getMessage());
+        }
+    }
+
+    /**
+     *  Method to create a MediaUploadable object from the input string
+     *  @param input String
+     *  @return MediaUploadable object
      */
     private MediaUploadable createObject(String input) {
+        long size;
+        BigDecimal cost;
+        Duration availability = Duration.ofDays(30);
+        int resolution = 1080;
+        int samplingRate = 44100;
+
         if (input == null || input.isEmpty()) {
-            System.out.println("Input is empty!");
-            return null;
+            throw new IllegalArgumentException("Input is empty!");
         }
 
-        //[Media-Typ] [P-Name] [kommaseparierte Tags, einzelnes Komma für keine] [Größe] [Abrufkosten] [[Optionale Parameter]]
         String[] parts = input.split("\\s+");
-        /*required fields: MediaType, P-Name, Tags, Size, Cost*/
         if (parts.length < 5) {
-            System.out.println("Incorrect input format!");
-           return null;
+            throw new IllegalArgumentException("Incorrect input format!");
+        }
+
+        try {
+            size = Long.parseLong(parts[3]);
+            cost = new BigDecimal(parts[4]);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Size and cost should be numeric values.");
         }
 
         String mediaType = parts[0];
         Uploader pName = new UploaderImpl(parts[1]);
         Collection<Tag> tags = parseTags(parts[2]);
-        long size = Long.parseLong(parts[3]);
-        BigDecimal cost = new BigDecimal(parts[4]);
 
-        // Default values for optional parameters
         String address = ad.generateAddress();
-        int samplingRate = 44100;
-        Duration availability = Duration.ofDays(30);
         long accessCount = 0;
-        int resolution = 1080;
 
+        try {
+            if(parts.length > 5){
+                availability = Duration.ofDays(Long.parseLong(parts[5]));
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Availability should be a whole number representing days.");
+        }
 
-        int index = 5; // Starting index for optional parameters
-        return switch (mediaType) {
-            case "Audio" -> {
-                if(parts.length > 5){
-                    availability = Duration.parse(parts[5]);
+        try {
+            if (mediaType.equals("Audio") || mediaType.equals("AudioVideo")) {
+                if (parts.length > 6) {
                     samplingRate = Integer.parseInt(parts[6]);
                 }
-                yield new AudioImpl(pName, tags, address, size, cost, availability, samplingRate, accessCount);
             }
-            case "Video" -> {
-                if(parts.length > 5){
-                    availability = Duration.parse(parts[5]);
-                    resolution = Integer.parseInt(parts[6]);
-                }
-                yield new VideoImpl(pName, tags, address, size, cost, availability, resolution, accessCount);
-            }
-            case "AudioVideo" -> {
-                if(parts.length > 5){
-                    availability = Duration.parse(parts[5]);
-                    samplingRate = Integer.parseInt(parts[6]);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Sampling rate should be a whole number.");
+        }
+
+        try {
+            if (mediaType.equals("Video") || mediaType.equals("AudioVideo")) {
+                if (parts.length > 7) {
                     resolution = Integer.parseInt(parts[7]);
                 }
-                yield new AudioVideoImpl(pName, tags, address, size, cost, availability, samplingRate, resolution, accessCount);
             }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Resolution should be a whole number.");
+        }
+
+        return switch (mediaType) {
+            case "Audio" -> new AudioImpl(pName, tags, address, size, cost, availability, samplingRate, accessCount);
+            case "Video" -> new VideoImpl(pName, tags, address, size, cost, availability, resolution, accessCount);
+            case "AudioVideo" ->
+                    new AudioVideoImpl(pName, tags, address, size, cost, availability, samplingRate, resolution, accessCount);
             default -> {
                 System.out.println("Unknown media type!");
                 yield null;
@@ -92,9 +117,10 @@ public class Command {
         };
     }
 
-
     /**
-     * Hilfsmethode zum Parsen der Tags
+     * Parse tags from the input string
+     * @param tagsStr String
+     * @return Collection of tags
      */
     private Collection<Tag> parseTags(String tagsStr) {
         if (tagsStr.equals(",")) {
@@ -102,8 +128,7 @@ public class Command {
         }
         String[] tags = tagsStr.split(",");
         if (tags.length > 4) {
-            System.out.println("Too many tags! Maximum allowed is 4.");
-            return Collections.emptyList(); // Or handle error appropriately
+            throw new IllegalArgumentException("Too many tags! Maximum allowed is 4.");
         }
 
         Collection<Tag> tagList = new ArrayList<>();
@@ -111,74 +136,89 @@ public class Command {
             try {
                 tagList.add(Tag.valueOf(tag));
             } catch (IllegalArgumentException e) {
-                System.out.println("Invalid tag: " + tag);
+                throw new IllegalArgumentException("Invalid tag: " + tag);
             }
         }
         return tagList;
     }
 
     /**
-     * Methode zum Einfuegen eines AudioImpl-Objekts
+     * Insert an audio object
+     * @param audioInput String
      */
     public void insertAudio(String audioInput) {
-        if (audioInput != null && !audioInput.isEmpty()) {
-            String res = ad.insert(createObject(audioInput));
-            System.out.println(res);
+        try {
+            if (audioInput != null && !audioInput.isEmpty()) {
+                String res = ad.insert(createObject(audioInput));
+                System.out.println(res);
+            }
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error inserting audio: " + e.getMessage());
         }
     }
 
     /**
-     * Methode zum Loeschen eines AudioImpl-Objekts
+     * Delete an audio object
+     * @param location String
      */
     public void deleteAudio(String location) {
-        if (location != null && !location.isEmpty()) {
-            if (ad.delete(location)) {
-                System.out.println("Delete erfolgreich");
-            } else {
-                System.out.println("Delete fehlgeschlagen");
+        try {
+            if (location != null && !location.isEmpty()) {
+                if (ad.delete(location)) {
+                    System.out.println("Delete erfolgreich");
+                } else {
+                    System.out.println("Delete fehlgeschlagen");
+                }
             }
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error deleting audio: " + e.getMessage());
         }
     }
 
     /**
-     * Read View For the CLI with all the types of media content in the System
+     * List all audio objects
      */
     public void listAudio() {
-        int index = 1;
-        String tags = "e";
-        String content = "";
-        list = ad.list();
-        for (MediaUploadable media : list) {
-            if (!media.getTags().isEmpty()){
-                tags = "i";
+        try {
+            int index = 1;
+            String tags = "e";
+            String content = "";
+            list = ad.list();
+            for (MediaUploadable media : list) {
+                if (!media.getTags().isEmpty()) {
+                    tags = "i";
+                }
+                if (media instanceof AudioImpl) {
+                    content = "Audio";
+                }
+                if (media instanceof VideoImpl) {
+                    content = "Video";
+                }
+                if (media instanceof AudioVideoImpl) content = "AudioVideo";
+                System.out.println(index + "." + "Content: " + content + "\n  Tags:  " + tags + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
+                        "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost());
+                index++;
             }
-            if(media instanceof AudioImpl){content = "Audio";}
-            if (media instanceof VideoImpl) {content = "Video";}
-            if (media instanceof AudioVideoImpl) content = "AudioVideo";
-            System.out.println(index + "." + "Content: "+content + "\n  Tags:  "+ tags + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: "+media.getAddress() + "\n  AccessCount: "+media.getAccessCount());
-            index++;
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error listing audio: " + e.getMessage());
         }
     }
 
     /**
-     * Methode zum Aktualisieren eines AudioImpl-Objekts
+     * Update an audio object
+     * @param location String
      */
     public void updateAudio(String location) {
-        if (location != null && !location.isEmpty()) {
-            if (ad.update(location)) {
-                System.out.println("Update erfolgreich: " + ad.getObj(location).getAddress() + " Zugriffe: " +ad.getObj(location).getAccessCount());
+        try {
+            if (location != null && !location.isEmpty()) {
+                if (ad.update(location)) {
+                    System.out.println("Update erfolgreich: " + ad.getObj(location).getAddress() + " Zugriffe: " + ad.getObj(location).getAccessCount());
+                }
+            } else {
+                System.out.println("Update fehlgeschlagen");
             }
-        } else {
-            System.out.println("Update fehlgeschlagen");
-        }
-    }
-
-    public static void main(String[] args) {
-        Command cmd = new Command();
-        Collection<Tag> t =cmd.parseTags("Animal,Review,Music,News");
-        for (Tag tt : t) {
-            System.out.println(tt);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error updating audio: " + e.getMessage());
         }
     }
 }
-
