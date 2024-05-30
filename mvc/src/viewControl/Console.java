@@ -8,7 +8,7 @@ import java.util.Scanner;
  * Console Klasse für die Steuerung der Anwendung
  */
 public class Console {
-    private Command cmd;
+    private final Command cmd;
 
     /**
      * Konstruktor
