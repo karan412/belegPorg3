@@ -14,18 +14,17 @@ import java.util.List;
 
 /**
  * Command Class for managing Media
- * */
+ */
 public class Command {
-
-    /**
-     * Admin instance
-     */
-    Admin ad = new Admin();
 
     /**
      * List of MediaUploadable objects
      */
     public List<MediaUploadable> list;
+    /**
+     * Admin instance
+     */
+    Admin ad = new Admin();
 
     /**
      * Main method for testing
@@ -43,9 +42,10 @@ public class Command {
     }
 
     /**
-     *  Method to create a MediaUploadable object from the input string
-     *  @param input String
-     *  @return MediaUploadable object
+     * Method to create a MediaUploadable object from the input string
+     *
+     * @param input String
+     * @return MediaUploadable object
      */
     private MediaUploadable createObject(String input) {
         long size;
@@ -78,7 +78,7 @@ public class Command {
         long accessCount = 0;
 
         try {
-            if(parts.length > 5){
+            if (parts.length > 5) {
                 availability = Duration.ofDays(Long.parseLong(parts[5]));
             }
         } catch (NumberFormatException e) {
@@ -119,6 +119,7 @@ public class Command {
 
     /**
      * Parse tags from the input string
+     *
      * @param tagsStr String
      * @return Collection of tags
      */
@@ -144,6 +145,7 @@ public class Command {
 
     /**
      * Insert an audio object
+     *
      * @param audioInput String
      */
     public void insertAudio(String audioInput) {
@@ -159,6 +161,7 @@ public class Command {
 
     /**
      * Delete an audio object
+     *
      * @param location String
      */
     public void deleteAudio(String location) {
@@ -206,6 +209,7 @@ public class Command {
 
     /**
      * Update an audio object
+     *
      * @param location String
      */
     public void updateAudio(String location) {

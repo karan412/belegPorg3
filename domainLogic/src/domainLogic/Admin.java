@@ -91,7 +91,7 @@ public class Admin {
     }
 
     /**
-     * Updates the access count of an AudioImpl object
+     * Updates the access count of the Media object
      *
      * @param location Path of the Audio
      * @return boolean that indicates the success or failure of the update
