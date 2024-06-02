@@ -24,7 +24,7 @@ public class Command {
     /**
      * Admin instance
      */
-    Admin ad = new Admin();
+    Admin ad = new Admin(1000000L);
 
     /**
      * Main method for testing
@@ -216,7 +216,7 @@ public class Command {
         try {
             if (location != null && !location.isEmpty()) {
                 if (ad.update(location)) {
-                    System.out.println("Update erfolgreich: " + ad.getObj(location).getAddress() + " Zugriffe: " + ad.getObj(location).getAccessCount());
+
                 }
             } else {
                 System.out.println("Update fehlgeschlagen");

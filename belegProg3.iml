@@ -10,5 +10,7 @@
     <orderEntry type="module" module-name="domainLogic" exported="" />
     <orderEntry type="library" exported="" name="mockito.core" level="project" />
     <orderEntry type="module" module-name="mvc" />
+    <orderEntry type="module" module-name="contract" exported="" />
+    <orderEntry type="module" module-name="simmulation" />
   </component>
 </module>

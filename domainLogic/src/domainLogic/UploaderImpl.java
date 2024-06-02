@@ -18,5 +18,4 @@ public class UploaderImpl implements Uploader {
     public UploaderImpl(String name) {
         this.name = name;
     }
-
 }
