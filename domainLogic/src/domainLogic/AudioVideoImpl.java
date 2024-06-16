@@ -5,12 +5,14 @@ import contract.Tag;
 import contract.Uploader;
 import uploaderManger.MediaUploadable;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Collection;
 
-public class AudioVideoImpl extends MediaUploadable implements AudioVideo{
+public class AudioVideoImpl extends MediaUploadable implements AudioVideo, Serializable {
 
+    static final long serialVersionUID=1L;
     private String address;
     private Collection<Tag> tag;
     private long accessCount;

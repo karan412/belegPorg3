@@ -3,8 +3,11 @@ package domainLogic;
 
 import contract.Uploader;
 
-public class UploaderImpl implements Uploader {
+import java.io.Serializable;
 
+public class UploaderImpl implements Uploader, Serializable {
+
+    static final long serialVersionUID=1L;
     private String name;
     @Override
     public String getName() {

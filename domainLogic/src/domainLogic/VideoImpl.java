@@ -5,11 +5,15 @@ import contract.Uploader;
 import contract.Video;
 import uploaderManger.MediaUploadable;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Collection;
 
-public class VideoImpl extends MediaUploadable implements Video {
+public class VideoImpl extends MediaUploadable implements Video, Serializable {
+
+
+    static final long serialVersionUID=1L;
     private String address;
     private Collection<Tag> tag;
     private long size;

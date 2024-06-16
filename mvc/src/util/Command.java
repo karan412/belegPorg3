@@ -1,8 +1,8 @@
 package util;
 
 import contract.Tag;
-import contract.Uploader;
 import domainLogic.*;
+import fileSystem.FileSystem;
 import uploaderManger.MediaUploadable;
 
 import java.math.BigDecimal;
@@ -24,22 +24,11 @@ public class Command {
     /**
      * Admin instance
      */
-    Admin ad = new Admin(1000000L);
 
-    /**
-     * Main method for testing
-     */
-    public static void main(String[] args) {
-        try {
-            Command cmd = new Command();
-            Collection<Tag> t = cmd.parseTags("Animal,Review,Music,News");
-            for (Tag tt : t) {
-                System.out.println(tt);
-            }
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error in main: " + e.getMessage());
-        }
-    }
+    long defaultCapacity = 1000L;
+    Admin ad = new Admin(defaultCapacity);
+
+    FileSystem fs = new FileSystem(ad);
 
     /**
      * Method to create a MediaUploadable object from the input string
@@ -71,7 +60,8 @@ public class Command {
         }
 
         String mediaType = parts[0];
-        Uploader pName = new UploaderImpl(parts[1]);
+        UploaderImpl pName = new UploaderImpl(parts[1]);
+        boolean uploaderExists = ad.insertUploader(pName);
         Collection<Tag> tags = parseTags(parts[2]);
 
         String address = ad.generateAddress();
@@ -216,13 +206,113 @@ public class Command {
         try {
             if (location != null && !location.isEmpty()) {
                 if (ad.update(location)) {
-
+                    System.out.println("Update erfolgreich");
+                } else {
+                    System.out.println("Update fehlgeschlagen");
                 }
             } else {
                 System.out.println("Update fehlgeschlagen");
             }
         } catch (IllegalArgumentException e) {
             System.out.println("Error updating audio: " + e.getMessage());
+        }
+    }
+
+
+    /**
+     * Filter media by type
+     *
+     * @param type String
+     */
+    public void filterMedia(String type) {
+        int index = 1;
+        List<MediaUploadable> list = ad.filterMedia(type);
+        for (MediaUploadable media : list) {
+            switch (type) {
+                case "Audio":
+                    if (media instanceof AudioImpl) {
+                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + ad.checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
+                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  SamplingRate: " + ((AudioImpl) media).getSamplingRate());
+                        index++;
+                    } else {
+                        System.out.println("No Audio Objects found");
+                    }
+                    break;
+                case "Video":
+                    if (media instanceof VideoImpl) {
+                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + ad.checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
+                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  Resolution: " + ((VideoImpl) media).getResolution());
+                    } else {
+                        System.out.println("No Video Objects found");
+                    }
+                    break;
+                case "AudioVideo":
+                    if (media instanceof AudioVideoImpl) {
+                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + ad.checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
+                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  Resolution: " + ((AudioVideoImpl) media).getResolution() + "\n  SamplingRate: " + ((AudioVideoImpl) media).getSamplingRate());
+                    } else {
+                        System.out.println("No AudioVideo Objects found");
+                    }
+                    break;
+                default:
+                    System.out.println("Type: " + type + " not identified [Known Types: Audio, Video, AudioVideo]");
+            }
+        }
+    }
+
+    /**
+     * Insert an uploader
+     *
+     * @param name String
+     */
+    public void insertUploader(String name) {
+        UploaderImpl uploader = new UploaderImpl(name);
+        boolean res = ad.insertUploader(uploader);
+        if (res) {
+            System.out.println("Uploader added successfully");
+        } else {
+            System.out.println("Uploader already exists");
+        }
+    }
+
+    /**
+     * Save state of Admin with jos or jbp
+     *
+     * @param tech String
+     */
+    public void saveState(String tech) {
+        switch (tech) {
+            case "jos":
+                // Save state
+                fs.saveState("state_jos.txt");
+                break;
+            case "jbp":
+                // TODO: Implement JBP logic here
+                break;
+            default:
+                System.out.println("Unknown tech: " + tech);
+        }
+    }
+
+    /**
+     * Load state of Admin with the jos or jbp
+     *
+     * @param tech String
+     */
+    public void loadState(String tech) {
+        switch (tech) {
+            case "jos":
+                // Load state
+                Admin loadedAdmin = fs.loadState("state_jos.txt");
+                if (loadedAdmin != null) {
+                    ad = loadedAdmin;
+                }
+                break;
+            case "jbp":
+                // TODO: Implement JBP logic here
+                break;
+            default:
+                System.out.println("Unknown tech: " + tech);
         }
     }
 }

@@ -13,7 +13,7 @@ public class Simulation1 {
         Thread inserter = simAdmin.InserterThread();
         Thread deleter = simAdmin.DeleterThread();
 
-        inserter.start();
+       inserter.start();
         deleter.start();
     }
 }

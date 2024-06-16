@@ -1,45 +1,57 @@
 package domainLogic;
-
 import uploaderManger.MediaUploadable;
 
+import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Admin Class for managing AudioImpl and UploaderImpl objects
  */
-public class Admin {
 
+public class Admin implements Serializable {
+
+    static final long serialVersionUID=1L;
+    /**
+     * Lock for synchronization
+     */
+    private final Lock adminLock = new ReentrantLock();
     /**
      * List Size
      */
-    private long SIZE_CAP;
-    /**
-     * List of AudioImpl objects
-     */
-    private List<MediaUploadable> list = new ArrayList<>();
+    private long CAPACITY;
     /**
      * HashMap to map UploaderImpl objects to AudioImpl objects
      */
     private HashMap<UploaderImpl, List<MediaUploadable>> UploaderObjMap = new HashMap<>();
-    /**
-     * Boolean to check if the list is full
-     */
-    private boolean full = false;
+
     /**
      * Counter for generating address
      */
     private int counter = 0;
 
-    public Admin(long SIZE_CAP) {
-        this.SIZE_CAP = SIZE_CAP;
+
+    public Admin(long CAPACITY) {
+        this.CAPACITY = CAPACITY;
     }
 
-    private void setSIZE_CAP(long SIZE_CAP) {
-        this.SIZE_CAP = SIZE_CAP;
+    /**
+     * Setter for CAPACITY
+     */
+    private void setCAPACITY(long CAPACITY) {
+        this.CAPACITY = CAPACITY;
+    }
+
+    /**
+     * Getter for CAPACITY
+     *
+     * @return CAPACITY
+     */
+    public long getCAPACITY() {
+        return this.CAPACITY;
     }
 
     /**
@@ -48,32 +60,35 @@ public class Admin {
      * @param media MediaImpl Object
      * @return String that indicates the success or failure of the insertion
      */
-    public synchronized String insert(MediaUploadable media) {
-        try {
-            if (media == null || media.getUploader() == null || media.getUploader().getName() == null)
-                return "Insert fehlgeschlagen - Media or or Uploader's name is null";
-            if (isFull() || media.getSize() > SIZE_CAP) {
-                return "Insert fehlgeschlagen - Liste ist voll";
-            }
-            boolean uploaderExists = false;
-            for (UploaderImpl u : UploaderObjMap.keySet()) {
-                if (u.getName().equals(media.getUploader().getName())) {
-                    UploaderObjMap.get(u).add(media);
-                    uploaderExists = true;
+    public String insert(MediaUploadable media) {
+        synchronized (adminLock) {
+            try {
+                if (media == null || media.getUploader() == null || media.getUploader().getName() == null) {
+                    return "Insert fehlgeschlagen - Media or Uploader's name is null";
                 }
-                if (!uploaderExists) {
-                    insertUploader(media.getUploader().getName());
+                if (isFull() || media.getSize() > CAPACITY) {
+                    return "Insert fehlgeschlagen - Liste ist voll";
+                }
+
+                boolean uploaderExists = false;
+                for (UploaderImpl u : UploaderObjMap.keySet()) {
                     if (u.getName().equals(media.getUploader().getName())) {
                         UploaderObjMap.get(u).add(media);
+                        setCAPACITY(CAPACITY - media.getSize());
+                        uploaderExists = true;
+                        break; // Exit the loop since we've found the uploader
                     }
                 }
+
+                if (!uploaderExists) {
+                    return "Uploader not found, Create Uploader first to insert Media";
+                }
+
+                return "Insert erfolgreich";
+            } catch (NullPointerException e) {
+                e.printStackTrace();
+                return "Insert fehlgeschlagen - Fehler: " + e.getMessage();
             }
-            list.add(media);
-            setSIZE_CAP(SIZE_CAP - media.getSize());
-            return "Insert erfolgreich";
-        } catch (NullPointerException e) {
-            e.printStackTrace();
-            return "Insert fehlgeschlagen - Fehler: " + e.getMessage();
         }
     }
 
@@ -83,19 +98,22 @@ public class Admin {
      * @param location Path of the Audio
      * @return boolean that indicates the success or failure of the deletion
      */
-    public synchronized boolean delete(String location) {
-        if (location == null) return false;
-        for (MediaUploadable media : list) {
-            if (media.getAddress().equals(location)) {
-                setSIZE_CAP(SIZE_CAP + media.getSize());
-                list.remove(media);
-                for (List<MediaUploadable> mediaList : UploaderObjMap.values()) {
-                    mediaList.remove(media);
+    public boolean delete(String location) {
+        synchronized (adminLock) {
+            if (location == null) return false;
+            for (Map.Entry<UploaderImpl, List<MediaUploadable>> entry : UploaderObjMap.entrySet()) {
+                Iterator<MediaUploadable> iterator = entry.getValue().iterator();
+                while (iterator.hasNext()) {
+                    MediaUploadable media = iterator.next();
+                    if (media.getAddress().equals(location)) {
+                        setCAPACITY(CAPACITY + media.getSize());
+                        iterator.remove();
+                        return true;
+                    }
                 }
-                return true;
             }
+            return false;
         }
-        return false;
     }
 
     /**
@@ -103,9 +121,14 @@ public class Admin {
      *
      * @return List of AudioImpl objects
      */
-    public synchronized List<MediaUploadable> list() {
-        if (list.isEmpty()) return new ArrayList<>();
-        else return new ArrayList<>(list);
+    public List<MediaUploadable> list() {
+        synchronized (adminLock) {
+            List<MediaUploadable> list = new ArrayList<>();
+            for (Map.Entry<UploaderImpl, List<MediaUploadable>> entry : UploaderObjMap.entrySet()) {
+                list.addAll(entry.getValue());
+            }
+            return list;
+        }
     }
 
     /**
@@ -115,14 +138,18 @@ public class Admin {
      * @return boolean that indicates the success or failure of the update
      */
     public boolean update(String location) {
-        if (location == null) return false;
-        for (MediaUploadable media : list) {
-            if (media.getAddress().equals(location)) {
-                media.setAccessCount(media.getAccessCount() + 1);
-                return true;
+        synchronized (adminLock) {
+            if (location == null) return false;
+            for (Map.Entry<UploaderImpl, List<MediaUploadable>> entry : UploaderObjMap.entrySet()) {
+                for (MediaUploadable media : entry.getValue()) {
+                    if (media.getAddress().equals(location)) {
+                        media.setAccessCount(media.getAccessCount() + 1);
+                        return true;
+                    }
+                }
             }
+            return false;
         }
-        return false;
     }
 
     /**
@@ -130,38 +157,50 @@ public class Admin {
      *
      * @return boolean that indicates if the list is full
      */
-    private synchronized boolean isFull() {
-        long cap = 0;
-        for (MediaUploadable media : list) {
-            cap += media.getSize();
+    private boolean isFull() {
+        synchronized (adminLock) {
+            long cap = 0;
+            for (MediaUploadable media : list()) {
+                cap += media.getSize();
+            }
+            return cap >= CAPACITY;
         }
-        return cap >= SIZE_CAP;
     }
 
     /**
      * Method to find an MediaObject by address
      *
+     * @param location Path of the Audio
      * @return int Groesse der Liste
      */
-    public boolean getObj(String location) {
-        if (location == null) return false;
-        for (MediaUploadable a : list) {
-            if (a.getAddress().equals(location)) {
-                return true;
+    private boolean getObj(String location) {
+        synchronized (adminLock) {
+            if (location == null) return false;
+            for (Map.Entry<UploaderImpl, List<MediaUploadable>> entry : UploaderObjMap.entrySet()) {
+                for (MediaUploadable media : entry.getValue()) {
+                    if (media.getAddress().equals(location)) {
+                        return true;
+                    }
+                }
             }
+            return false;
         }
-        return false;
     }
 
     /**
-     * Inserts an Uploader in the HashMap
+     * Inserts an Uploader into the HashMap
      *
-     * @param name Name des Uploaders
+     * @param uploader UploaderImpl Object
+     * @return boolean, that indicates the success or failure of the insertion
      */
-    public synchronized void insertUploader(String name) {
-        if (name != null && UploaderObjMap != null && !UploaderObjMap.containsKey(name)) {
-            UploaderImpl uploader = new UploaderImpl(name);
+    public boolean insertUploader(UploaderImpl uploader) {
+        synchronized (adminLock) {
+            if (uploader == null) return false;
+            if (UploaderObjMap.containsKey(uploader)) {
+                return false;
+            }
             UploaderObjMap.put(uploader, new ArrayList<>());
+            return true;
         }
     }
 
@@ -171,42 +210,50 @@ public class Admin {
      * @param name Name des Uploaders
      * @return boolean, der den Erfolg oder Misserfolg des Loeschens anzeigt
      */
-    public synchronized boolean deleteUploader(String name) {
-        if (name == null || UploaderObjMap == null) return false;
-        for (UploaderImpl u : UploaderObjMap.keySet()) {
-            if (u.getName().equals(name)) {
-                UploaderObjMap.remove(u);
-                UploaderObjMap.values().removeIf(mediaList -> mediaList.removeIf(media -> media.getUploader().getName().equals(name)));
-                return true;
+    private boolean deleteUploader(String name) {
+        synchronized (adminLock) {
+            if (name == null || UploaderObjMap == null) return false;
+            for (UploaderImpl u : UploaderObjMap.keySet()) {
+                if (u.getName().equals(name)) {
+                    UploaderObjMap.remove(u);
+                    UploaderObjMap.values().removeIf(mediaList -> mediaList.removeIf(media -> media.getUploader().getName().equals(name)));
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
     }
 
     /**
      * Method to generate an address for the AudioImpl object
+     * @return String that contains the address
      */
     public String generateAddress() {
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-        String formattedDate = now.format(formatter);
-        int res = counter;
-        counter++;
-        return "file_" + formattedDate + "_" + res;
+        synchronized (adminLock) {
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+            String formattedDate = now.format(formatter);
+            int res = counter;
+            counter++;
+            return "file_" + formattedDate + "_" + res;
+        }
     }
 
     /**
      * Checks for tags in the Media object
      *
      * @param media MediaUploadable Object
+     * @return String that contains the tags
      */
-    private String checkTag(MediaUploadable media) {
-        if (media == null || media.getTags() == null || media.getTags().isEmpty()) {
-            return "No tags given";
-        } else {
-            {
-                String tags = media.getTags().toString();
-                return tags.substring(1, tags.length() - 1);
+    public String checkTag(MediaUploadable media) {
+        synchronized (adminLock) {
+            if (media == null || media.getTags() == null || media.getTags().isEmpty()) {
+                return "No tags given";
+            } else {
+                {
+                    String tags = media.getTags().toString();
+                    return tags.substring(1, tags.length() - 1);
+                }
             }
         }
     }
@@ -215,43 +262,48 @@ public class Admin {
      * Filter Media by type
      *
      * @param type String Type of Media
+     * @return List of MediaUploadable objects
      */
-    private void filterMedia(String type) {
-        if (list == null) {
-            System.out.println("No Media Objects found");
-            return;
-        }
-        int index = 1;
-        for (MediaUploadable media : list) {
-            switch (type) {
-                case "Audio":
-                    if (media instanceof AudioImpl) {
-                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
-                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  SamplingRate: " + ((AudioImpl) media).getSamplingRate());
-                        index++;
-                    } else {
-                        System.out.println("No Audio Objects found");
-                    }
-                    break;
-                case "Video":
-                    if (media instanceof VideoImpl) {
-                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
-                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  Resolution: " + ((VideoImpl) media).getResolution());
-                    } else {
-                        System.out.println("No Video Objects found");
-                    }
-                    break;
-                case "AudioVideo":
-                    if (media instanceof AudioVideoImpl) {
-                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
-                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  Resolution: " + ((AudioVideoImpl) media).getResolution() + "\n  SamplingRate: " + ((AudioVideoImpl) media).getSamplingRate());
-                    } else {
-                        System.out.println("No AudioVideo Objects found");
-                    }
-                    break;
-                default:
-                    System.out.println("Type: " + type + " not identified [Kdnown Types: Audio, Video, AudioVideo]");
+    public List<MediaUploadable> filterMedia(String type) {
+        synchronized (adminLock) {
+            if (list() == null) {
+                System.out.println("No Media Objects found");
+                return null;
             }
+            List<MediaUploadable> list = list();
+            List<MediaUploadable> res = new ArrayList<>();
+            // Insert in view
+            for (MediaUploadable media : list) {
+                switch (type) {
+                    case "Audio":
+                        if (media instanceof AudioImpl) {
+                            res.add(media);
+                        }
+                        break;
+                    case "Video":
+                        if (media instanceof VideoImpl) {
+                            res.add(media);
+                        }
+                        break;
+                    case "AudioVideo":
+                        if (media instanceof AudioVideoImpl) {
+                            res.add(media);
+                        }
+                        break;
+                    default:
+                        return res;
+                }
+            }
+            return res;
         }
+    }
+
+    @Override
+    public String toString() {
+        return super.toString()+"Admin{" +
+                "CAPACITY=" + CAPACITY +
+                ", UploaderObjMap=" + UploaderObjMap +
+                ", counter=" + counter +
+                '}';
     }
 }

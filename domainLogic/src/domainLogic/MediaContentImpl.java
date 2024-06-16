@@ -5,8 +5,9 @@ import contract.Tag;
 
 import java.util.Collection;
 
-public class MediaContentImpl implements MediaContent {
+public class MediaContentImpl implements MediaContent{
 
+    static final long serialVersionUID = 1L;
     private String address;
     private Collection<Tag> tag;
     private long accessCount;
