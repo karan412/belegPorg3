@@ -67,6 +67,9 @@ class AdminTest {
         audio = new AudioImpl(uploader, tags, address, size, cost, availability, samplingRate, accessCount);
         audio2 = new AudioImpl(uploader2, tags2, address2, size2, cost2, availability2, samplingRate2, accessCount2);
         audio3 = new AudioImpl(uploader3, tags3, address3, size3, cost3, availability3, samplingRate3, accessCount3);
+        ad.insertUploader(uploader);
+        ad.insertUploader(uploader2);
+        ad.insertUploader(uploader3);
     }
 
     @Test
@@ -74,7 +77,7 @@ class AdminTest {
 
         String res = ad.insert(null);
 
-        assertEquals("Insert fehlgeschlagen - Media or or Uploader's name is null", res);
+        assertEquals("Insert fehlgeschlagen - Media or Uploader's name is null", res);
         System.out.println("Audio Address: " + audio.getAddress());
     }
 
@@ -99,7 +102,8 @@ class AdminTest {
         ad.insert(audio);
         ad.insert(audio2);
         ad.insert(audio3);
-        assertTrue(ad.list().size() == 3);
+        List<MediaUploadable> list = ad.list();
+        assertEquals(3, list.size());
     }
 
     @Test
@@ -148,15 +152,69 @@ class AdminTest {
     @Test
     void updateWithMockito() {
         assertEquals("Insert erfolgreich",ad.insert(audio));
-       // assertTrue(ad.delete("example.com/audio"));
         assertTrue(ad.update("example.com/audio"));
         audio=mock(AudioImpl.class);
         Uploader uploader = mock(Uploader.class);
         when(audio.getAddress()).thenReturn("example.com/audio");
         when(audio.getUploader()).thenReturn(uploader);
-        //verify(audio, times(1)).setAccessCount(anyLong());
+        when(audio.getAccessCount()).thenReturn(0L);
+        when(uploader.getName()).thenReturn("UploaderName");
         when(audio.getAddress()).thenReturn("example.com/audio");
 
     }
 
+    @Test
+    void filterMediaByInvalidType() {
+        ad.insert(audio);
+        ad.insert(audio2);
+        ad.insert(audio3);
+        assertEquals(3, ad.list().size());
+        List<MediaUploadable> list = ad.filterMedia("Video");
+        assertEquals(0, list.size());
+    }
+
+    @Test
+    void filterMediaByValidType() {
+        ad.insert(audio);
+        ad.insert(audio2);
+        ad.insert(audio3);
+        List<MediaUploadable> list = ad.filterMedia("Audio");
+        assertEquals(3, list.size());
+    }
+
+    @Test
+    void checkStorageCapacityAfterInsert() {
+        assertEquals(100000L, ad.getCAPACITY());
+        ad.insert(audio);
+        assertEquals(100000L - audio.getSize(), ad.getCAPACITY());
+        ad.insert(audio2);
+        assertEquals(100000L - audio.getSize() - audio2.getSize(), ad.getCAPACITY());
+        ad.insert(audio3);
+        assertEquals(100000L - audio.getSize() - audio2.getSize() - audio3.getSize(), ad.getCAPACITY());
+    }
+
+    @Test
+    void checkStorageCapacityAfterDelete() {
+        assertEquals(100000L, ad.getCAPACITY());
+        ad.insert(audio);
+        ad.insert(audio2);
+        ad.insert(audio3);
+        assertEquals(100000L - audio.getSize() - audio2.getSize() - audio3.getSize(), ad.getCAPACITY());
+        ad.delete("example.com/audio");
+        assertEquals(100000L - audio2.getSize() - audio3.getSize(), ad.getCAPACITY());
+        ad.delete("example.com/audio2");
+        assertEquals(100000L - audio3.getSize(), ad.getCAPACITY());
+        ad.delete("example.com/audio3");
+        assertEquals(100000L, ad.getCAPACITY());
+    }
+
+    @Test
+    void insertWithFullStorage() {
+        ad = new Admin(1L);
+        assertEquals(1L, ad.getCAPACITY());
+        assertTrue(ad.insertUploader(uploader2));
+        assertEquals("Insert erfolgreich", ad.insert(audio2));
+        assertEquals("Insert fehlgeschlagen - Liste ist voll", ad.insert(audio));
+        assertEquals(0L, ad.getCAPACITY());
+    }
 }

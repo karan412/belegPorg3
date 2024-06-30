@@ -61,7 +61,6 @@ public class Command {
 
         String mediaType = parts[0];
         UploaderImpl pName = new UploaderImpl(parts[1]);
-        boolean uploaderExists = ad.insertUploader(pName);
         Collection<Tag> tags = parseTags(parts[2]);
 
         String address = ad.generateAddress();
@@ -206,12 +205,10 @@ public class Command {
         try {
             if (location != null && !location.isEmpty()) {
                 if (ad.update(location)) {
-                    System.out.println("Update erfolgreich");
+                    System.out.println("Update Successfull");
                 } else {
-                    System.out.println("Update fehlgeschlagen");
+                    System.out.println("Update failed - Location not found");
                 }
-            } else {
-                System.out.println("Update fehlgeschlagen");
             }
         } catch (IllegalArgumentException e) {
             System.out.println("Error updating audio: " + e.getMessage());
@@ -227,35 +224,11 @@ public class Command {
     public void filterMedia(String type) {
         int index = 1;
         List<MediaUploadable> list = ad.filterMedia(type);
-        for (MediaUploadable media : list) {
-            switch (type) {
-                case "Audio":
-                    if (media instanceof AudioImpl) {
-                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + ad.checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
-                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  SamplingRate: " + ((AudioImpl) media).getSamplingRate());
-                        index++;
-                    } else {
-                        System.out.println("No Audio Objects found");
-                    }
-                    break;
-                case "Video":
-                    if (media instanceof VideoImpl) {
-                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + ad.checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
-                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  Resolution: " + ((VideoImpl) media).getResolution());
-                    } else {
-                        System.out.println("No Video Objects found");
-                    }
-                    break;
-                case "AudioVideo":
-                    if (media instanceof AudioVideoImpl) {
-                        System.out.println(index + "." + "Content: Audio " + "\n  Tags:  " + ad.checkTag(media) + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
-                                "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost() + "\n  Resolution: " + ((AudioVideoImpl) media).getResolution() + "\n  SamplingRate: " + ((AudioVideoImpl) media).getSamplingRate());
-                    } else {
-                        System.out.println("No AudioVideo Objects found");
-                    }
-                    break;
-                default:
-                    System.out.println("Type: " + type + " not identified [Known Types: Audio, Video, AudioVideo]");
+        if (!list.isEmpty()) {
+            for (MediaUploadable media : list) {
+                System.out.println(index + "." + "Content: " + type + "\n  Tags:  " + media.getTags() + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
+                        "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost());
+                index++;
             }
         }
     }

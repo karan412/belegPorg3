@@ -12,55 +12,56 @@ import java.util.Collection;
 
 public class AudioImpl extends MediaUploadable implements Audio, Serializable {
 
-    static final long serialVersionUID=1L;
+    static final long serialVersionUID = 1L;
     /**
-     * Anzahl der Zugriffe auf das Audio
+     * Accesscount of the Audio
      */
     private long accessCount = 0;
 
     /**
-     * Samplingrate des Audios
+     * Samplingrate of the Audio
      */
     private int samplingRate;
 
     /**
-     * Adresse des Audios
+     * Address of the Audio
      */
     private String address;
 
     /**
-     * Tags des Audios
+     * Tags of the Audio
      */
     private Collection<Tag> tag;
 
     /**
-     * Groesse des Audios
+     * Size of the Audio
      */
     private long size;
 
     /**
-     * Uploader des Audios
+     * Uploader of the Audio
      */
     private Uploader uploader;
 
     /**
-     * Verfuegbarkeit des Audios
+     * Availability of the Audio
      */
     private Duration availability;
 
     /**
-     * Kosten des Audios
+     * Cost of the Audio
      */
     private BigDecimal cost;
 
     /**
-     * Default Konstruktor fuer AudioImpl
+     * Default Constructor
      */
     public AudioImpl() {
     }
 
+
     /**
-     * Konstruktor fuer AudioImpl nur mit 2 parameters
+     * Constructor for AudioImpl
      *
      * @param samplingRate
      * @param address
@@ -103,11 +104,7 @@ public class AudioImpl extends MediaUploadable implements Audio, Serializable {
         return this.accessCount;
     }
 
-    /**
-     * Setter fuer das accesCount des Audios
-     *
-     * @param accessCount
-     */
+    @Override
     public void setAccessCount(long accessCount) {
         this.accessCount = accessCount;
     }

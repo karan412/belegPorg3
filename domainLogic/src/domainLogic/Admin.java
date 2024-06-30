@@ -1,7 +1,9 @@
 package domainLogic;
-import uploaderManger.MediaUploadable;
 
-import java.io.*;
+import ObserverPat.Observable;
+import ObserverPat.Observer;
+import uploaderManger.MediaUploadable;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -12,9 +14,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * Admin Class for managing AudioImpl and UploaderImpl objects
  */
 
-public class Admin implements Serializable {
+public class Admin implements Serializable, Observable{
 
-    static final long serialVersionUID=1L;
+    static final long serialVersionUID = 1L;
     /**
      * Lock for synchronization
      */
@@ -55,6 +57,11 @@ public class Admin implements Serializable {
     }
 
     /**
+     * List of Observers
+     */
+    private List<Observer> obsList = new ArrayList<>();
+
+    /**
      * Inserts an AudioImpl object into the list
      *
      * @param media MediaImpl Object
@@ -69,17 +76,16 @@ public class Admin implements Serializable {
                 if (isFull() || media.getSize() > CAPACITY) {
                     return "Insert fehlgeschlagen - Liste ist voll";
                 }
-
                 boolean uploaderExists = false;
                 for (UploaderImpl u : UploaderObjMap.keySet()) {
                     if (u.getName().equals(media.getUploader().getName())) {
                         UploaderObjMap.get(u).add(media);
                         setCAPACITY(CAPACITY - media.getSize());
+                        this.observerNotify("Insert Media");
                         uploaderExists = true;
                         break; // Exit the loop since we've found the uploader
                     }
                 }
-
                 if (!uploaderExists) {
                     return "Uploader not found, Create Uploader first to insert Media";
                 }
@@ -107,6 +113,7 @@ public class Admin implements Serializable {
                     MediaUploadable media = iterator.next();
                     if (media.getAddress().equals(location)) {
                         setCAPACITY(CAPACITY + media.getSize());
+                        this.observerNotify("Delete Media");
                         iterator.remove();
                         return true;
                     }
@@ -144,6 +151,7 @@ public class Admin implements Serializable {
                 for (MediaUploadable media : entry.getValue()) {
                     if (media.getAddress().equals(location)) {
                         media.setAccessCount(media.getAccessCount() + 1);
+                        this.observerNotify("Update Media");
                         return true;
                     }
                 }
@@ -200,15 +208,16 @@ public class Admin implements Serializable {
                 return false;
             }
             UploaderObjMap.put(uploader, new ArrayList<>());
+            this.observerNotify("Insert Uploader");
             return true;
         }
     }
 
     /**
-     * Deletes an Uploader from the HashMap
+     * Deletes an Uploader from the HashMap inkl Media Files
      *
-     * @param name Name des Uploaders
-     * @return boolean, der den Erfolg oder Misserfolg des Loeschens anzeigt
+     * @param name Name of the Uplaoder
+     * @return boolean, that indicates the success or failure of the deletion
      */
     private boolean deleteUploader(String name) {
         synchronized (adminLock) {
@@ -217,6 +226,7 @@ public class Admin implements Serializable {
                 if (u.getName().equals(name)) {
                     UploaderObjMap.remove(u);
                     UploaderObjMap.values().removeIf(mediaList -> mediaList.removeIf(media -> media.getUploader().getName().equals(name)));
+                    //this.observerNotify("Delete Uploader");
                     return true;
                 }
             }
@@ -226,6 +236,7 @@ public class Admin implements Serializable {
 
     /**
      * Method to generate an address for the AudioImpl object
+     *
      * @return String that contains the address
      */
     public String generateAddress() {
@@ -272,7 +283,7 @@ public class Admin implements Serializable {
             }
             List<MediaUploadable> list = list();
             List<MediaUploadable> res = new ArrayList<>();
-            // Insert in view
+            // Filter Media by type and add to res
             for (MediaUploadable media : list) {
                 switch (type) {
                     case "Audio":
@@ -291,7 +302,7 @@ public class Admin implements Serializable {
                         }
                         break;
                     default:
-                        return res;
+                        return null;
                 }
             }
             return res;
@@ -300,10 +311,34 @@ public class Admin implements Serializable {
 
     @Override
     public String toString() {
-        return super.toString()+"Admin{" +
+        return super.toString() + "Admin{" +
                 "CAPACITY=" + CAPACITY +
                 ", UploaderObjMap=" + UploaderObjMap +
                 ", counter=" + counter +
                 '}';
+
+    }
+
+    @Override
+    public void registerObserver(Observer observer) {
+        synchronized (adminLock) {
+            obsList.add(observer);
+        }
+    }
+
+    @Override
+    public void removeObserver(Observer observer) {
+        synchronized (adminLock) {
+            obsList.remove(observer);
+        }
+    }
+
+    @Override
+    public void observerNotify(String status) {
+        synchronized (adminLock) {
+            for (Observer observer : obsList) {
+                observer.update();
+            }
+        }
     }
 }
