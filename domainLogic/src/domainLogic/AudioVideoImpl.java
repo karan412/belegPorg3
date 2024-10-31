@@ -2,98 +2,38 @@ package domainLogic;
 
 import contract.AudioVideo;
 import contract.Tag;
-import contract.Uploader;
-import uploaderManger.MediaUploadable;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Collection;
 
-public class AudioVideoImpl extends MediaUploadable implements AudioVideo, Serializable {
+/**
+ * AudioVideoImpl class
+ */
+public class AudioVideoImpl extends MediaContentImpl implements AudioVideo, Serializable {
 
-    static final long serialVersionUID=1L;
-    private String address;
-    private Collection<Tag> tag;
-    private long accessCount;
-    private long size;
-    private Uploader uploader;
-    private Duration availability;
-    private BigDecimal cost;
-    private int resolution;
-    private int samplingRate;
+    private final int samplingRate;
+    private final int resolution;
+
+    public AudioVideoImpl(String mediaContentType, String uploaderName, String address, Collection<Tag> tags, Long sizeMediaContent, BigDecimal cost, Duration availability, int samplingRate, int resolution) {
+        super(mediaContentType, uploaderName, address, tags, sizeMediaContent, cost, availability);
+        this.samplingRate = samplingRate;
+        this.resolution = resolution;
+    }
 
     @Override
     public int getSamplingRate() {
-        return this.samplingRate;
-    }
-
-    @Override
-    public String getAddress() {
-        return this.address;
-    }
-
-    @Override
-    public Collection<Tag> getTags() {
-        return this.tag;
-    }
-
-    @Override
-    public long getAccessCount() {
-        return this.accessCount;
-    }
-
-    @Override
-    public long getSize() {
-        return this.size;
-    }
-
-    @Override
-    public Uploader getUploader() {
-        return this.uploader;
-    }
-
-    @Override
-    public Duration getAvailability() {
-        return this.availability;
-    }
-
-    @Override
-    public BigDecimal getCost() {
-        return this.cost;
+        return samplingRate;
     }
 
     @Override
     public int getResolution() {
-        return this.resolution;
-    }
-
-    /**
-     * Konstruktor
-     * @param address Adresse
-     * @param tag Tags
-     * @param accessCount Zugriffszahl
-     * @param size Groesse
-     * @param uploader Uploader
-     * @param availability Verfuegbarkeit
-     * @param cost Kosten
-     * @param resolution Aufloesung
-     * @param samplingRate Abtastrate
-     */
-    public AudioVideoImpl(Uploader uploader, Collection<Tag> tag, String address, long size, BigDecimal cost, Duration availability, int resolution, int samplingRate, long accessCount) {
-        this.address = address;
-        this.tag = tag;
-        this.accessCount = accessCount;
-        this.size = size;
-        this.uploader = uploader;
-        this.availability = availability;
-        this.cost = cost;
-        this.resolution = resolution;
-        this.samplingRate = samplingRate;
+        return resolution;
     }
 
     @Override
-    public void setAccessCount(long accessCount) {
-        this.accessCount = accessCount;
+    public String toString() {
+        return super.toString() + ", sampling rate= " + this.samplingRate + ", resolution= " + this.resolution;
     }
 }

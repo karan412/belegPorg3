@@ -5,20 +5,32 @@ import contract.Uploader;
 
 import java.io.Serializable;
 
+/**
+ * UploaderImpl class
+ */
 public class UploaderImpl implements Uploader, Serializable {
 
-    static final long serialVersionUID=1L;
-    private String name;
-    @Override
-    public String getName() {
-        return this.name;
-    }
+    static final long serialVersionUID = 1L;
+    private String uploaderName;
 
     /**
      * Konstruktor
-     * @param name Name des Uploaders
+     *
+     * @param uploaderName Name des Uploaders
      */
-    public UploaderImpl(String name) {
-        this.name = name;
+    public UploaderImpl(String uploaderName) {
+        this.uploaderName = uploaderName;
+    }
+
+    @Override
+    public String getName() {
+        return this.uploaderName;
+    }
+
+    @Override
+    public String toString() {
+        return "{" +
+                "uploaderName='" + uploaderName + '\'' +
+                '}';
     }
 }

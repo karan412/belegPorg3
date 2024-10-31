@@ -9,6 +9,8 @@
       <module fileurl="file://$PROJECT_DIR$/io/io.iml" filepath="$PROJECT_DIR$/io/io.iml" />
       <module fileurl="file://$PROJECT_DIR$/mvc/mvc.iml" filepath="$PROJECT_DIR$/mvc/mvc.iml" />
       <module fileurl="file://$PROJECT_DIR$/net/net.iml" filepath="$PROJECT_DIR$/net/net.iml" />
+      <module fileurl="file://$PROJECT_DIR$/observerInterface/observerInterface.iml" filepath="$PROJECT_DIR$/observerInterface/observerInterface.iml" />
+      <module fileurl="file://$PROJECT_DIR$/observers/observers.iml" filepath="$PROJECT_DIR$/observers/observers.iml" />
       <module fileurl="file://$PROJECT_DIR$/simmulation/simmulation.iml" filepath="$PROJECT_DIR$/simmulation/simmulation.iml" />
     </modules>
   </component>

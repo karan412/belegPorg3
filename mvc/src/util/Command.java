@@ -3,7 +3,10 @@ package util;
 import contract.Tag;
 import domainLogic.*;
 import fileSystem.FileSystem;
-import uploaderManger.MediaUploadable;
+import handler.MediaEvents.*;
+import handler.uploaderEvents.DeleteUploaderEvent;
+import handler.uploaderEvents.InsertUploaderEvent;
+import handler.uploaderEvents.ListUploaderMediaCountEvent;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -18,25 +21,83 @@ import java.util.List;
 public class Command {
 
     /**
-     * List of MediaUploadable objects
+     * List of MediaContentImpl objects
      */
-    public List<MediaUploadable> list;
+    public List<MediaContentImpl> list;
     /**
      * Admin instance
      */
-
-    long defaultCapacity = 1000L;
-    Admin ad = new Admin(defaultCapacity);
-
-    FileSystem fs = new FileSystem(ad);
+    private Admin ad;
+    /**
+     * Capacity of the Admin
+     */
+    private long capacity;
 
     /**
-     * Method to create a MediaUploadable object from the input string
+     * FileSystem instance
+     */
+    private FileSystem fs;
+
+    private EventHandler<InsertUploaderEvent> insertUploader;
+    private EventHandler<DeleteUploaderEvent> deleteUploader;
+    private EventHandler<ListUploaderMediaCountEvent> getAllMediaCount;
+    private EventHandler<InsertMediaEvent> insertMedia;
+    private EventHandler<DeleteMediaEvent> deleteMedia;
+    private EventHandler<UpdateMediaEvent> updateMedia;
+    private EventHandler<FilterMediaEvent> filterMedia;
+    private EventHandler<TagMediaEvent> tagMedia;
+
+    /**
+     * Constructor
+     *
+     * @param capacity long
+     */
+    public Command(Admin ad, long capacity) {
+        this.capacity = capacity;
+        this.ad = ad;
+        fs = new FileSystem(ad);
+    }
+
+    public void setUploaderInsertHandler(EventHandler<InsertUploaderEvent> insertUploader) {
+        this.insertUploader = insertUploader;
+    }
+
+    public void setUploaderDeleteHandler(EventHandler<DeleteUploaderEvent> deleteUploader) {
+        this.deleteUploader = deleteUploader;
+    }
+
+    public void setGetAllProducerMediaCountHandler(EventHandler<ListUploaderMediaCountEvent> getAllMediaCount) {
+        this.getAllMediaCount = getAllMediaCount;
+    }
+
+    public void setMediaInsertHandler(EventHandler<InsertMediaEvent> insertMedia) {
+        this.insertMedia = insertMedia;
+    }
+
+    public void setMediaDeleteHandler(EventHandler<DeleteMediaEvent> deleteMedia) {
+        this.deleteMedia = deleteMedia;
+    }
+
+    public void setMediaUpdateHandler(EventHandler<UpdateMediaEvent> updateMedia) {
+        this.updateMedia = updateMedia;
+    }
+
+
+    public void setFilterMediaHandler(EventHandler<FilterMediaEvent> filterMedia) {
+        this.filterMedia = filterMedia;
+    }
+
+    public void setTagMediaHandler(EventHandler<TagMediaEvent> tagMedia) {
+        this.tagMedia = tagMedia;
+    }
+
+    /**
+     * Method to create a MediaContentImpl object from the input string
      *
      * @param input String
-     * @return MediaUploadable object
+     * @return MediaContentImpl object
      */
-    private MediaUploadable createObject(String input) {
+    private MediaContentImpl createObject(String input) {
         long size;
         BigDecimal cost;
         Duration availability = Duration.ofDays(30);
@@ -64,7 +125,6 @@ public class Command {
         Collection<Tag> tags = parseTags(parts[2]);
 
         String address = ad.generateAddress();
-        long accessCount = 0;
 
         try {
             if (parts.length > 5) {
@@ -94,15 +154,13 @@ public class Command {
             throw new IllegalArgumentException("Resolution should be a whole number.");
         }
 
+
         return switch (mediaType) {
-            case "Audio" -> new AudioImpl(pName, tags, address, size, cost, availability, samplingRate, accessCount);
-            case "Video" -> new VideoImpl(pName, tags, address, size, cost, availability, resolution, accessCount);
+            case "Audio" -> new AudioImpl(mediaType, pName.getName(), address, tags, size, cost, availability,samplingRate);
+            case "Video" -> new VideoImpl(mediaType, pName.getName(), address, tags, size, cost, availability, resolution);
             case "AudioVideo" ->
-                    new AudioVideoImpl(pName, tags, address, size, cost, availability, samplingRate, resolution, accessCount);
-            default -> {
-                System.out.println("Unknown media type!");
-                yield null;
-            }
+                    new AudioVideoImpl(mediaType, pName.getName(), address, tags, size, cost, availability, samplingRate, resolution);
+            default -> throw new IllegalArgumentException("Invalid media type: " + mediaType);
         };
     }
 
@@ -135,13 +193,14 @@ public class Command {
     /**
      * Insert an audio object
      *
-     * @param audioInput String
+     * @param media String
      */
-    public void insertAudio(String audioInput) {
+    public void insertMedia(String media) {
         try {
-            if (audioInput != null && !audioInput.isEmpty()) {
-                String res = ad.insert(createObject(audioInput));
-                System.out.println(res);
+            if (media != null && !media.isEmpty()) {
+                MediaContentImpl obj = createObject(media);
+                InsertMediaEvent event = new InsertMediaEvent(this, obj);
+                insertMedia.handle(event);
             }
         } catch (IllegalArgumentException e) {
             System.out.println("Error inserting audio: " + e.getMessage());
@@ -149,51 +208,39 @@ public class Command {
     }
 
     /**
-     * Delete an audio object
+     * Delete an Media object
      *
      * @param location String
      */
-    public void deleteAudio(String location) {
-        try {
-            if (location != null && !location.isEmpty()) {
-                if (ad.delete(location)) {
-                    System.out.println("Delete erfolgreich");
-                } else {
-                    System.out.println("Delete fehlgeschlagen");
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error deleting audio: " + e.getMessage());
-        }
+    public void deleteMedia(String location) {
+        DeleteMediaEvent event = new DeleteMediaEvent(this, location);
+        deleteMedia.handle(event);
     }
 
     /**
      * List all audio objects
      */
-    public void listAudio() {
-        try {
-            int index = 1;
-            String tags = "e";
-            String content = "";
-            list = ad.list();
-            for (MediaUploadable media : list) {
-                if (!media.getTags().isEmpty()) {
-                    tags = "i";
-                }
-                if (media instanceof AudioImpl) {
-                    content = "Audio";
-                }
-                if (media instanceof VideoImpl) {
-                    content = "Video";
-                }
-                if (media instanceof AudioVideoImpl) content = "AudioVideo";
-                System.out.println(index + "." + "Content: " + content + "\n  Tags:  " + tags + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
-                        "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost());
-                index++;
-            }
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error listing audio: " + e.getMessage());
-        }
+    public void displayScreen() {
+        ListUploaderMediaCountEvent event1 = new ListUploaderMediaCountEvent(this);
+        getAllMediaCount.handle(event1);
+
+    }
+
+    /**
+     * List all media objects
+     */
+    public void displayAllContent(String type) {
+        FilterMediaEvent event = new FilterMediaEvent(this, type);
+        filterMedia.handle(event);
+
+    }
+
+    /**
+     * List all given/not given Tags
+     */
+    public void displayTags(String mode) {
+        TagMediaEvent event = new TagMediaEvent(this, mode);
+        tagMedia.handle(event);
     }
 
     /**
@@ -201,14 +248,11 @@ public class Command {
      *
      * @param location String
      */
-    public void updateAudio(String location) {
+    public void updateMedia(String location) {
         try {
             if (location != null && !location.isEmpty()) {
-                if (ad.update(location)) {
-                    System.out.println("Update Successfull");
-                } else {
-                    System.out.println("Update failed - Location not found");
-                }
+                UpdateMediaEvent event = new UpdateMediaEvent(this, location);
+                updateMedia.handle(event);
             }
         } catch (IllegalArgumentException e) {
             System.out.println("Error updating audio: " + e.getMessage());
@@ -217,20 +261,13 @@ public class Command {
 
 
     /**
-     * Filter media by type
+     * Filter media by type, sends type to the FilterMediaEvent
      *
      * @param type String
      */
     public void filterMedia(String type) {
-        int index = 1;
-        List<MediaUploadable> list = ad.filterMedia(type);
-        if (!list.isEmpty()) {
-            for (MediaUploadable media : list) {
-                System.out.println(index + "." + "Content: " + type + "\n  Tags:  " + media.getTags() + "\n  Uploader: " + media.getUploader().getName() + "\n  Address: " + media.getAddress() + "\n  AccessCount: " + media.getAccessCount() +
-                        "\n  Size: " + media.getSize() + "\n  Availability: " + media.getAvailability() + "\n  Cost: " + media.getCost());
-                index++;
-            }
-        }
+        FilterMediaEvent event = new FilterMediaEvent(this, type);
+        filterMedia.handle(event);
     }
 
     /**
@@ -240,12 +277,19 @@ public class Command {
      */
     public void insertUploader(String name) {
         UploaderImpl uploader = new UploaderImpl(name);
-        boolean res = ad.insertUploader(uploader);
-        if (res) {
-            System.out.println("Uploader added successfully");
-        } else {
-            System.out.println("Uploader already exists");
-        }
+        InsertUploaderEvent event = new InsertUploaderEvent(this, uploader);
+        insertUploader.handle(event);
+    }
+
+
+    /**
+     * Delete an uploader
+     *
+     * @param name String
+     */
+    public void deleteUploader(String name) {
+        DeleteUploaderEvent event = new DeleteUploaderEvent(this, name);
+        deleteUploader.handle(event);
     }
 
     /**
@@ -257,10 +301,10 @@ public class Command {
         switch (tech) {
             case "jos":
                 // Save state
-                fs.saveState("state_jos.txt");
+                fs.saveState("state.jos");
                 break;
             case "jbp":
-                // TODO: Implement JBP logic here
+                System.out.println("JBP not implemented.");
                 break;
             default:
                 System.out.println("Unknown tech: " + tech);
@@ -276,16 +320,18 @@ public class Command {
         switch (tech) {
             case "jos":
                 // Load state
-                Admin loadedAdmin = fs.loadState("state_jos.txt");
+                Admin loadedAdmin = fs.loadState("state.jos");
                 if (loadedAdmin != null) {
                     ad = loadedAdmin;
                 }
                 break;
             case "jbp":
-                // TODO: Implement JBP logic here
+                System.out.println("JBP not implemented.");
                 break;
             default:
                 System.out.println("Unknown tech: " + tech);
         }
     }
+
+
 }

@@ -3,8 +3,8 @@ package tcp;
 import contract.Tag;
 import domainLogic.Admin;
 import domainLogic.AudioImpl;
+import domainLogic.MediaContentImpl;
 import domainLogic.UploaderImpl;
-import uploaderManger.MediaUploadable;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -101,7 +101,7 @@ public class TCPServer extends Thread {
     private String getListAsString() {
         StringBuilder result = new StringBuilder();
         if(!ad.list().isEmpty()) {
-            for (MediaUploadable media : ad.list()) {
+            for (MediaContentImpl media : ad.list()) {
                 result.append(media.toString()).append("\n");
                 return result.toString();
             }
@@ -121,8 +121,7 @@ public class TCPServer extends Thread {
             Duration availability = Duration.ofDays(30);
             int samplingRate = 44100;
             long accessCount = 0;
-            ad.insert(new AudioImpl(up, tags, address, size, cost,
-                    availability, samplingRate, accessCount));
+            ad.insert(new AudioImpl("Audio", up.getName(), address, tags, size, cost, availability, samplingRate));
             return true;
         }if (argument.equals("Uploader")) {
             ad.insertUploader(new UploaderImpl("Hans"));

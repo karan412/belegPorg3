@@ -2,8 +2,8 @@ import contract.Tag;
 import contract.Uploader;
 import domainLogic.Admin;
 import domainLogic.AudioImpl;
+import domainLogic.MediaContentImpl;
 import domainLogic.UploaderImpl;
-import uploaderManger.MediaUploadable;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -35,8 +35,9 @@ public class SimulationAdmin extends Thread {
     public Thread InserterThread() {
         return new Thread(() -> {
             Random random = new Random();
-            Uploader uploader = new UploaderImpl("Carmy");
-            Collection<Tag> tags = Arrays.asList(Tag.Music, Tag.News, Tag.Animal, Tag.Review);
+            UploaderImpl uploader = new UploaderImpl("Carmy");
+            Collection<Tag> tags = Arrays.asList(Tag.Music, Tag.News, Tag.Review);
+            admin.insertUploader(uploader);
 
             while (true) {
                 synchronized (this) {
@@ -45,9 +46,8 @@ public class SimulationAdmin extends Thread {
                         BigDecimal cost = BigDecimal.valueOf(random.nextDouble() * 100);
                         Duration availability = Duration.ofDays(10);
                         int samplingRate = 44100;
-                        long accessCount = 0;
 
-                        MediaUploadable media = new AudioImpl(uploader, tags, address, size, cost, availability, samplingRate, accessCount);
+                        MediaContentImpl media = new AudioImpl("Audio", uploader.getName(), address, tags, size, cost, availability,samplingRate);
                         String result = admin.insert(media);
                         System.out.println("Insert result: " + result + " - " + media.getAddress());
                 }
@@ -66,7 +66,7 @@ public class SimulationAdmin extends Thread {
                 synchronized (this) {
                     if (!admin.list().isEmpty()) {
                         int index = random.nextInt(admin.list().size());
-                        MediaUploadable media = admin.list().get(index);
+                        MediaContentImpl media = admin.list().get(index);
                         boolean result = admin.delete(media.getAddress());
                         System.out.println("Delete result: " + result + " - " + media.getAddress());
                     }
